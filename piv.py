@@ -127,8 +127,6 @@ def find_peak(cor):
     ln_phi_i_j_minus_1 = np.log(cor[i, j - 1])
     ln_phi_i_j_plus_1 = np.log(cor[i, j + 1])
 
-
-
     # Compute subpixel peak location using the Gaussian fit formula
     x_0 = j + (ln_phi_i_j_minus_1 - ln_phi_i_j_plus_1) / (
         2 * ln_phi_i_j_minus_1 - 4 * ln_phi_i_j + 2 * ln_phi_i_j_plus_1
@@ -138,8 +136,6 @@ def find_peak(cor):
     )
 
     return x_0, y_0
-
-
 
 def create_velocity_mask(image, mask_file='velocity_mask.npy'):
     """
@@ -450,27 +446,52 @@ def calculate_piv(pic_1, pic_2, window_size, l_px, dt, mask_ds=None, snr_thresho
             U[i_idx, j_idx] = u
     
     # Detect outliers in U, V based on their neighbors
-    # for i_idx in range(1, rows - 1):
-    #     for j_idx in range(1, cols - 1):
-    #         if mask_ds is not None and mask_ds[i_idx, j_idx]:
-    #             continue
-    #         # Get the 10x10 neighborhood
-    #         u_neigh = U[i_idx-1:i_idx+2, j_idx-1:j_idx+2].flatten()
-    #         v_neigh = V[i_idx-1:i_idx+2, j_idx-1:j_idx+2].flatten()
+    U_orig = U.copy()
+    V_orig = V.copy()
+    eps = 0.1
+    for i_idx in range(1, rows - 1):
+        for j_idx in range(1, cols - 1):
+            if mask_ds is not None and mask_ds[i_idx, j_idx]:
+                continue
+            # Get the 10x10 neighborhood
+            u_neigh = U[i_idx-1:i_idx+2, j_idx-1:j_idx+2].flatten()
+            v_neigh = V[i_idx-1:i_idx+2, j_idx-1:j_idx+2].flatten()
 
-    #         # Calculate the median and standard deviation
-    #         u_median = np.nanmedian(u_neigh)
-    #         v_median = np.nanmedian(v_neigh)
-    #         u_std = np.nanstd(u_neigh)
-    #         v_std = np.nanstd(v_neigh)
-    #         # Check if the current value is an outlier
-    #         if np.abs(U[i_idx, j_idx] - u_median) > 3 * u_std or np.abs(V[i_idx, j_idx] - v_median) > 3 * v_std:
-    #             U[i_idx, j_idx] = u_median
-    #             V[i_idx, j_idx] = v_median
-    #             # snrs[i_idx, j_idx] = np.nan
+            # extract the 3x3 neighborhood excluding the center
+            mask = np.ones((3,3), dtype=bool)
+            mask[1,1] = False  # Center element
+            u_neigh_2 = U[i_idx-1:i_idx+2, j_idx-1:j_idx+2][mask].flatten()
+            v_neigh_2 = V[i_idx-1:i_idx+2, j_idx-1:j_idx+2][mask].flatten()
+
+            # Calculate the median and standard deviation
+            u_median = np.nanmedian(u_neigh_2)
+            v_median = np.nanmedian(v_neigh_2)
+
+            # Calculate the fluctuation relative to the median
+            u_fluct = U[i_idx, j_idx] - u_median
+            v_fluct = V[i_idx, j_idx] - v_median
+
+            # Calculate the residual
+            u_res = u_neigh_2 - u_median
+            v_res = v_neigh_2 - v_median
+
+            # Calculate the median of the absolute residuals
+            u_res_median = np.nanmedian(np.abs(u_res))
+            v_res_median = np.nanmedian(np.abs(v_res))
+
+            # Calculate the normalized fluctuations
+            u_norm_fluct = np.abs(u_fluct / (u_res_median + eps))
+            v_norm_fluct = np.abs(v_fluct / (v_res_median + eps))
+            norm_fluct = np.sqrt(u_norm_fluct**2 + v_norm_fluct**2)
+
+            # Check if the current value is an outlier
+            if norm_fluct > 3.5:
+                U[i_idx, j_idx] = np.nan
+                V[i_idx, j_idx] = np.nan
+                # snrs[i_idx, j_idx] = np.nan
 
 
-    return U, V, X, Y, snrs
+    return U, V, X, Y, snrs, U_orig, V_orig
 
 
 def calculate_piv_multipass(pic_1, pic_2, window_size, l_px, dt, passes, mask_ds=None, snr_threshold=1.07, overlap=0):
@@ -700,8 +721,7 @@ def calculate_piv_multipass(pic_1, pic_2, window_size, l_px, dt, passes, mask_ds
 
     return U, V, X, Y, snrs_map
 
-#6, 
-snr_threshold = 1.2
+snr_threshold = 1.
 reference_data = np.loadtxt('data\\alpha_15_100_PIV_MP(3x32x32_50ov)=unknown\\B00006.dat', skiprows=3)
 refX = reference_data[:, 0]
 refY = reference_data[:, 1]
@@ -713,7 +733,7 @@ dt = 70e-6
 window_size = 32
 # Example usage (replace the manual PIV computation with function call):
 mask, mask_ds = apply_velocity_mask_to_piv(window_size, 50)
-U, V, X, Y, snrs = calculate_piv(pic_1, pic_2, window_size, l_px, dt, mask_ds, snr_threshold, 50)
+U, V, X, Y, snrs, U_orig, V_orig = calculate_piv(pic_1, pic_2, window_size, l_px, dt, mask_ds, snr_threshold, 50)
 # U, V, X, Y, snrs = calculate_piv_multipass(pic_1, pic_2, window_size, l_px, dt,3, mask_ds, snr_threshold, 50)
 U[mask_ds==1], V[mask_ds==1] = np.nan, np.nan
 
