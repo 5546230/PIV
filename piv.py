@@ -888,10 +888,114 @@ for angle in angles:
     refX = reference_data_mean[:, 0]
     refY = reference_data_mean[:, 1][np.isclose(refX, 120, atol=0.5)][1:-1]
     refUmean = reference_data_mean[:, 2][np.isclose(refX, 120, atol=0.5)][1:-1]
-    plt.plot(refUmean, refY-50, label=f'alpha={angle} deg')
+    # plt.plot(refUmean, refY-50, label=f'alpha={angle} deg')
     refUstdev = reference_data_stdev[:, 2][np.isclose(refX, 120, atol=0.5)][1:-1]
     # plt.plot(refUstdev, refY-50, linestyle='--', label=f'alpha={angle} deg (stdev)')
     data_array = np.column_stack((refY-50, refUmean, refUstdev))
     np.savetxt(f'data/alpha_{angle}_Uprov.txt', data_array, delimiter='\t', header='y_mm\tmean_u\trms_u', comments='')
-plt.legend()
-plt.show()
+# plt.legend()
+# plt.show()
+
+    # Load the reference data for the current angle
+for N in [16, 32, 64]:
+    reference_data = np.loadtxt(f'data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_SP({N}x{N}_0ov)=unknown/B00001.dat', skiprows=3)
+    refX = reference_data[:, 0]
+    refY = reference_data[:, 1]
+    refU = reference_data[:, 2]
+    refV = reference_data[:, 3]
+    refValid = reference_data[:, 4]
+
+    refX = refX - np.min(refX)  # Normalize X
+    refY = refY - np.min(refY)  # Normalize Y
+    if N == 16:
+        rows, cols = 78, 101
+    elif N == 32: 
+        rows, cols = 39, 51 
+    else:  # N == 64
+        rows, cols = 20, 26
+
+    # Reshape and filter the reference data
+    refU[refValid == 0] = np.nan
+    refV[refValid == 0] = np.nan
+    refU = refU.reshape((rows, cols))
+    refV = refV.reshape((rows, cols))
+
+    # Calculate the magnitude of the reference velocity
+    refMag = np.sqrt(refU**2 + refV**2)
+
+    # Plot the results for the current angle
+    plot_results(refX.reshape((rows, cols)), 
+                    refY.reshape((rows, cols))[::-1, :], 
+                    refU, -refV, 
+                    file_name=f'figures/piv_results_sp_{N}.png', step=3)
+ 
+# check overlap effect on PIV results
+reference_data = np.loadtxt('data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_SP(32x32_50ov)=unknown/B00001.dat', skiprows=3)
+refX = reference_data[:, 0]
+refY = reference_data[:, 1]
+refU = reference_data[:, 2]
+refV = reference_data[:, 3]
+refValid = reference_data[:, 4]
+refX = refX - np.min(refX)  # Normalize X
+refY = refY - np.min(refY)  # Normalize Y
+rows, cols = 78, 101  # Assuming these are the dimensions of the reference data
+# Reshape and filter the reference data
+refU[refValid == 0] = np.nan
+refV[refValid == 0] = np.nan
+refU = refU.reshape((rows, cols))
+refV = refV.reshape((rows, cols))
+# Plot the results for the current angle
+plot_results(refX.reshape((rows, cols)), 
+             refY.reshape((rows, cols))[::-1, :], 
+             refU, -refV, 
+             file_name=f'figures/piv_results_sp_32_50ov.png', step=3)
+
+# check short dt at alfa 15
+reference_data = np.loadtxt('data/alpha_15_20_dt_6_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+refX = reference_data[:, 0]
+refY = reference_data[:, 1]
+refU = reference_data[:, 2]
+refV = reference_data[:, 3]
+
+refValid = reference_data[:, 4]
+refX = refX - np.min(refX)  # Normalize X
+refY = refY - np.min(refY)  # Normalize Y
+rows, cols = 78, 101  # Assuming these are the dimensions of the reference data
+# Reshape and filter the reference data
+refU[refValid == 0] = np.nan
+refV[refValid == 0] = np.nan
+refU = refU.reshape((rows, cols))
+refV = refV.reshape((rows, cols))
+# Plot the results for the current angle
+plot_results(refX.reshape((rows, cols)), 
+             refY.reshape((rows, cols))[::-1, :], 
+             refU, -refV, 
+             file_name=f'figures/piv_results_short_dt.png', step=3)
+
+# calculate the mean of the PIV results for angle 15
+# N_ensemble = 20
+for N_ensemble in (5, 10, 20, 50):
+    reference_U = np.zeros((78, 101))
+    reference_V = np.zeros((78, 101))
+    denominator = np.zeros((78, 101))
+    for i in range(N_ensemble):
+        n_str = str(i+1).zfill(2)
+        reference_data = np.loadtxt(f'data/alpha_15_100_PIV_MP(3x32x32_50ov)=unknown/B000{n_str}.dat', skiprows=3)
+        refX = reference_data[:, 0]
+        refY = reference_data[:, 1]
+        refU = reference_data[:, 2]
+        refV = reference_data[:, 3]
+
+        reference_U += refU.reshape((78, 101))
+        reference_V += refV.reshape((78, 101))
+        refValid = reference_data[:, 4]
+        denominator += (refValid.reshape((78, 101)) > 0).astype(float)
+
+    reference_U /= denominator
+    reference_V /= denominator
+
+    # Plot the mean results for angle 15
+    plot_results(refX.reshape((rows, cols)), 
+                refY.reshape((rows, cols))[::-1, :], 
+                reference_U, -reference_V, 
+                file_name=f'figures/piv_results_mean_angle_15_{N_ensemble}.png', step=3)
