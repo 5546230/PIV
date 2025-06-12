@@ -41,39 +41,51 @@ y_cor = [
     -0.0019938, -0.0015870, -0.0013419, -0.0012600
 ]
 
-def plot_airfoil(angle_of_attack, scalefactor, xloc, yloc):
+
+def plot_airfoil(angle_of_attack, scalefactor, xloc, yloc, ax=None):
     x = np.array(x_cor)
     y = np.array(y_cor)
-
-    x_le, y_le = 0.25, 0
-
-    x0, y0 = x_le, y_le # rotation centre at leading edge (LE)
-
-    alpha_rad = -np.radians(angle_of_attack) 
 
     scale = scalefactor    
     x_qc_target, y_qc_target = xloc, yloc
 
-    x_scaled = x * scale
-    y_scaled = y * scale
-
+    # Quarter chord as rotation center
     x_qc_local = 0.25 * scale
     y_qc_local = 0.0
 
-    x0, y0 = x_qc_local, y_qc_local 
+    alpha_rad = -np.radians(angle_of_attack)
 
-    x_rot = np.cos(alpha_rad) * (x_scaled - x0) - np.sin(alpha_rad) * (y_scaled - y0)
-    y_rot = np.sin(alpha_rad) * (x_scaled - x0) + np.cos(alpha_rad) * (y_scaled - y0)
+    # Scale
+    x_scaled = x * scale
+    y_scaled = y * scale
 
+    # Rotate about quarter chord
+    x_rot = np.cos(alpha_rad) * (x_scaled - x_qc_local) - np.sin(alpha_rad) * (y_scaled - y_qc_local)
+    y_rot = np.sin(alpha_rad) * (x_scaled - x_qc_local) + np.cos(alpha_rad) * (y_scaled - y_qc_local)
+
+    # Translate to desired position
     x_final = x_rot + x_qc_target
     y_final = y_rot + y_qc_target
 
-    plt.fill(x_final, y_final, color='grey', alpha=1)
-    plt.axis('equal')
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.show()
+    # Use passed-in axis or create a new one
+    if ax is None:
+        fig, ax = plt.subplots()
+        standalone = True
+    else:
+        standalone = False
+
+    ax.fill(x_final, y_final, color='grey', alpha=1)
+
+    if standalone:
+        ax.set_aspect('equal')
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+
 
 if __name__ == "__main__":
-    angle_of_attack = 6  # Example angle of attack in degrees
-    plot_airfoil(angle_of_attack, scalefactor=1.0, xloc=2, yloc=-3)
+    angle_of_attack = 0  # Example angle of attack in degrees
+    plot_airfoil(0, 100, 52, 70, ax=None)
+    plot_airfoil(angle_of_attack, 1, 0.25, 0, ax=None)
+    plt.show()
+
+
