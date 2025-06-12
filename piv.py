@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import correlate
 from skimage.io import imread
+from airfoilplotter import plot_airfoil
 
 path = 'alpha_15_100_SubSlidMinOverTime/B00001.tif'
 # path = 'calibration/B00001.tif'
@@ -96,12 +97,12 @@ window_size = 32
 pic_1_orig = data[:mid//2, :].copy()
 pic_2_orig = data[mid//2:, :].copy()
 
-# fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-# axs[0].imshow(pic_1, cmap='gray')
-# axs[0].set_title('Image 1')
-# axs[1].imshow(pic_2, cmap='gray')
-# axs[1].set_title('Image 2')
-# plt.show()
+fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+axs[0].imshow(pic_1, cmap='gray')
+axs[0].set_title('Image 1')
+axs[1].imshow(pic_2, cmap='gray')
+axs[1].set_title('Image 2')
+plt.show()
 
 
 l_px = 170e-3/1616 # length of a pixel in meters #TODO: check this value
@@ -737,7 +738,7 @@ U, V, X, Y, snrs, U_orig, V_orig = calculate_piv(pic_1, pic_2, window_size, l_px
 # U, V, X, Y, snrs = calculate_piv_multipass(pic_1, pic_2, window_size, l_px, dt,3, mask_ds, snr_threshold, 50)
 U[mask_ds==1], V[mask_ds==1] = np.nan, np.nan
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-def plot_results(X, Y, U, V, file_name='piv_results.png', step=3):
+def plot_results(X, Y, U, V, alpha, file_name='piv_results.pdf', step=3):
     """
     Plot the PIV results with quiver and contour plots.
     
@@ -763,6 +764,8 @@ def plot_results(X, Y, U, V, file_name='piv_results.png', step=3):
     Uds = U[::step, ::step]
     Vds = V[::step, ::step]
     ax.quiver(Xds, Yds, Uds, Vds)
+
+    plot_airfoil(alpha, 100, 52, 70, ax=ax)
     
     ax.set_xlabel('X [mm]')
     ax.set_ylabel('Y [mm]')
@@ -796,8 +799,8 @@ X = X * l_px * 1e3  # Convert to mm
 Y = Y * l_px * 1e3  # Convert to mm
 refX = refX.reshape((rows, cols)) - np.min(refX)
 refY = refY.reshape((rows, cols)) - np.min(refY)
-plot_results(X, Y, U, -V, file_name='figures/piv_results_own_code.png', step=3)
-plot_results(refX, refY[::-1, :], refU, -refV, file_name='figures/piv_results_reference.png', step=3)
+plot_results(X, Y, U, -V, 15, file_name='figures/piv_results_own_code.pdf', step=3)
+plot_results(refX, refY[::-1, :], refU, -refV, 15, file_name='figures/piv_results_reference.pdf', step=3)
 
 # plot data for all angles of attack 
 angles = [0, 5, 15]
@@ -833,8 +836,8 @@ for angle in angles:
     # Plot the results for the current angle
     plot_results(refX.reshape((rows, cols)), 
                  refY.reshape((rows, cols))[::-1, :], 
-                 refU, -refV, 
-                 file_name=f'figures/piv_results_{angle}_instantaneous.png', step=3)
+                 refU, -refV, angle,
+                 file_name=f'figures/piv_results_{angle}_instantaneous.pdf', step=3)
     
 for angle in angles:
     # Load the reference data for the current angle
@@ -870,8 +873,8 @@ for angle in angles:
     # Plot the results for the current angle
     plot_results(refX, 
                  refY, 
-                 refU, -refV, 
-                 file_name=f'figures/piv_results_{angle}_mean.png', step=3)
+                 refU, -refV, angle, 
+                 file_name=f'figures/piv_results_{angle}_mean.pdf', step=3)
     
 for angle in angles:
     # Load the reference data for the current angle
@@ -926,8 +929,8 @@ for N in [16, 32, 64]:
     # Plot the results for the current angle
     plot_results(refX.reshape((rows, cols)), 
                     refY.reshape((rows, cols))[::-1, :], 
-                    refU, -refV, 
-                    file_name=f'figures/piv_results_sp_{N}.png', step=3)
+                    refU, -refV, 0,
+                    file_name=f'figures/piv_results_sp_{N}.pdf', step=3)
  
 # check overlap effect on PIV results
 reference_data = np.loadtxt('data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_SP(32x32_50ov)=unknown/B00001.dat', skiprows=3)
@@ -947,8 +950,8 @@ refV = refV.reshape((rows, cols))
 # Plot the results for the current angle
 plot_results(refX.reshape((rows, cols)), 
              refY.reshape((rows, cols))[::-1, :], 
-             refU, -refV, 
-             file_name=f'figures/piv_results_sp_32_50ov.png', step=3)
+             refU, -refV, 0, 
+             file_name=f'figures/piv_results_sp_32_50ov.pdf', step=3)
 
 # check short dt at alfa 15
 reference_data = np.loadtxt('data/alpha_15_20_dt_6_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
@@ -969,8 +972,8 @@ refV = refV.reshape((rows, cols))
 # Plot the results for the current angle
 plot_results(refX.reshape((rows, cols)), 
              refY.reshape((rows, cols))[::-1, :], 
-             refU, -refV, 
-             file_name=f'figures/piv_results_short_dt.png', step=3)
+             refU, -refV, 15, 
+             file_name=f'figures/piv_results_short_dt.pdf', step=3)
 
 # calculate the mean of the PIV results for angle 15
 # N_ensemble = 20
@@ -986,6 +989,9 @@ for N_ensemble in (5, 10, 20, 50):
         refU = reference_data[:, 2]
         refV = reference_data[:, 3]
 
+        refX = refX - np.min(refX)  # Normalize X
+        refY = refY - np.min(refY)  # Normalize Y
+
         reference_U += refU.reshape((78, 101))
         reference_V += refV.reshape((78, 101))
         refValid = reference_data[:, 4]
@@ -997,5 +1003,5 @@ for N_ensemble in (5, 10, 20, 50):
     # Plot the mean results for angle 15
     plot_results(refX.reshape((rows, cols)), 
                 refY.reshape((rows, cols))[::-1, :], 
-                reference_U, -reference_V, 
-                file_name=f'figures/piv_results_mean_angle_15_{N_ensemble}.png', step=3)
+                reference_U, -reference_V, 15,
+                file_name=f'figures/piv_results_mean_angle_15_{N_ensemble}.pdf', step=3)
