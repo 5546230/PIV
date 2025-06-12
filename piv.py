@@ -832,8 +832,8 @@ for angle in angles:
     
     # Plot the results for the current angle
     plot_results(refX.reshape((rows, cols)), 
-                 refY.reshape((rows, cols)), 
-                 refU, refV, 
+                 refY.reshape((rows, cols))[::-1, :], 
+                 refU, -refV, 
                  file_name=f'figures/piv_results_{angle}_instantaneous.png', step=3)
     
 for angle in angles:
@@ -860,13 +860,16 @@ for angle in angles:
     refV[refValid == 0] = np.nan
     refU = refU.reshape((rows, cols))
     refV = refV.reshape((rows, cols))
+    refX = refX.reshape((rows, cols))
+    refY = refY.reshape((rows, cols))
+    refY = refY[::-1, :]  # Reverse Y-axis for correct orientation
     
     # Calculate the magnitude of the reference velocity
     refMag = np.sqrt(refU**2 + refV**2)
     
     # Plot the results for the current angle
-    plot_results(refX.reshape((rows, cols)), 
-                 refY.reshape((rows, cols)), 
-                 refU, refV, 
+    plot_results(refX, 
+                 refY, 
+                 refU, -refV, 
                  file_name=f'figures/piv_results_{angle}_mean.png', step=3)
     
