@@ -96,12 +96,12 @@ window_size = 32
 pic_1_orig = data[:mid//2, :].copy()
 pic_2_orig = data[mid//2:, :].copy()
 
-fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-axs[0].imshow(pic_1, cmap='gray')
-axs[0].set_title('Image 1')
-axs[1].imshow(pic_2, cmap='gray')
-axs[1].set_title('Image 2')
-plt.show()
+# fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+# axs[0].imshow(pic_1, cmap='gray')
+# axs[0].set_title('Image 1')
+# axs[1].imshow(pic_2, cmap='gray')
+# axs[1].set_title('Image 2')
+# plt.show()
 
 
 l_px = 170e-3/1616 # length of a pixel in meters #TODO: check this value
@@ -448,7 +448,7 @@ def calculate_piv(pic_1, pic_2, window_size, l_px, dt, mask_ds=None, snr_thresho
     # Detect outliers in U, V based on their neighbors
     U_orig = U.copy()
     V_orig = V.copy()
-    eps = 0.1
+    eps = 0.1 * l_px / dt  # Small epsilon to avoid division by zero
     for i_idx in range(1, rows - 1):
         for j_idx in range(1, cols - 1):
             if mask_ds is not None and mask_ds[i_idx, j_idx]:
@@ -659,60 +659,60 @@ def calculate_piv_multipass(pic_1, pic_2, window_size, l_px, dt, passes, mask_ds
 
 
     # Outlier detection and replacement (applied to pixel displacements)
-    for _ in range(3): # Iterative outlier removal
-        U_temp = U_pix.copy()
-        V_temp = V_pix.copy()
-        for i_r in range(rows):
-            for j_c in range(cols):
-                if mask_ds is not None and i_r < mask_ds.shape[0] and j_c < mask_ds.shape[1] and mask_ds[i_r, j_c]:
-                    continue
-                if np.isnan(U_pix[i_r, j_c]):
-                    continue
+    # for _ in range(3): # Iterative outlier removal
+    #     U_temp = U_pix.copy()
+    #     V_temp = V_pix.copy()
+    #     for i_r in range(rows):
+    #         for j_c in range(cols):
+    #             if mask_ds is not None and i_r < mask_ds.shape[0] and j_c < mask_ds.shape[1] and mask_ds[i_r, j_c]:
+    #                 continue
+    #             if np.isnan(U_pix[i_r, j_c]):
+    #                 continue
 
-                # Define neighborhood (e.g., 3x3 or 5x5, excluding NaNs and masked points)
-                u_neigh, v_neigh = [], []
-                # Using a 3x3 neighborhood for simplicity here. For larger, adjust bounds.
-                for ni in range(max(0, i_r-1), min(rows, i_r+2)):
-                    for nj in range(max(0, j_c-1), min(cols, j_c+2)):
-                        if (ni == i_r and nj == j_c):
-                            continue
-                        if mask_ds is not None and ni < mask_ds.shape[0] and nj < mask_ds.shape[1] and mask_ds[ni, nj]:
-                            continue
-                        if not np.isnan(U_temp[ni, nj]): # Use U_temp for consistent comparison within iteration
-                            u_neigh.append(U_temp[ni, nj])
-                            v_neigh.append(V_temp[ni, nj])
+    #             # Define neighborhood (e.g., 3x3 or 5x5, excluding NaNs and masked points)
+    #             u_neigh, v_neigh = [], []
+    #             # Using a 3x3 neighborhood for simplicity here. For larger, adjust bounds.
+    #             for ni in range(max(0, i_r-1), min(rows, i_r+2)):
+    #                 for nj in range(max(0, j_c-1), min(cols, j_c+2)):
+    #                     if (ni == i_r and nj == j_c):
+    #                         continue
+    #                     if mask_ds is not None and ni < mask_ds.shape[0] and nj < mask_ds.shape[1] and mask_ds[ni, nj]:
+    #                         continue
+    #                     if not np.isnan(U_temp[ni, nj]): # Use U_temp for consistent comparison within iteration
+    #                         u_neigh.append(U_temp[ni, nj])
+    #                         v_neigh.append(V_temp[ni, nj])
                 
-                if not u_neigh: # No valid neighbors
-                    continue
+    #             if not u_neigh: # No valid neighbors
+    #                 continue
 
-                u_median = np.median(u_neigh)
-                v_median = np.median(v_neigh)
+    #             u_median = np.median(u_neigh)
+    #             v_median = np.median(v_neigh)
                 
-                # Normalized median test (from Westerweel & Scarano 2005)
-                # Fluctuations of u relative to median of neighbors
-                u_fluct = [u - u_median for u in u_neigh]
-                v_fluct = [v - v_median for v in v_neigh]
+    #             # Normalized median test (from Westerweel & Scarano 2005)
+    #             # Fluctuations of u relative to median of neighbors
+    #             u_fluct = [u - u_median for u in u_neigh]
+    #             v_fluct = [v - v_median for v in v_neigh]
                 
-                median_u_fluct = np.median(np.abs(u_fluct))
-                median_v_fluct = np.median(np.abs(v_fluct))
+    #             median_u_fluct = np.median(np.abs(u_fluct))
+    #             median_v_fluct = np.median(np.abs(v_fluct))
 
-                # Threshold (e.g., 2 times the median fluctuation)
-                # Using a simpler std-dev based approach from original code for now
-                u_std = np.std(u_neigh) if len(u_neigh) > 1 else 0
-                v_std = np.std(v_neigh) if len(v_neigh) > 1 else 0
+    #             # Threshold (e.g., 2 times the median fluctuation)
+    #             # Using a simpler std-dev based approach from original code for now
+    #             u_std = np.std(u_neigh) if len(u_neigh) > 1 else 0
+    #             v_std = np.std(v_neigh) if len(v_neigh) > 1 else 0
 
-                # If std is very small, avoid overly aggressive filtering
-                u_std = max(u_std, 1e-2) # Minimum std deviation to consider
-                v_std = max(v_std, 1e-2)
+    #             # If std is very small, avoid overly aggressive filtering
+    #             u_std = max(u_std, 1e-2) # Minimum std deviation to consider
+    #             v_std = max(v_std, 1e-2)
 
 
-                if np.abs(U_pix[i_r, j_c] - u_median) > 2 * u_std or \
-                   np.abs(V_pix[i_r, j_c] - v_median) > 2 * v_std:
-                    U_pix[i_r, j_c] = u_median # Replace with median
-                    V_pix[i_r, j_c] = v_median
-                    # Or, could set to NaN if preferred:
-                    # U_pix[i_r, j_c] = np.nan
-                    # V_pix[i_r, j_c] = np.nan
+    #             if np.abs(U_pix[i_r, j_c] - u_median) > 2 * u_std or \
+    #                np.abs(V_pix[i_r, j_c] - v_median) > 2 * v_std:
+    #                 U_pix[i_r, j_c] = u_median # Replace with median
+    #                 V_pix[i_r, j_c] = v_median
+    #                 # Or, could set to NaN if preferred:
+    #                 # U_pix[i_r, j_c] = np.nan
+    #                 # V_pix[i_r, j_c] = np.nan
 
 
     # Convert pixel displacements to physical velocities
@@ -736,7 +736,43 @@ mask, mask_ds = apply_velocity_mask_to_piv(window_size, 50)
 U, V, X, Y, snrs, U_orig, V_orig = calculate_piv(pic_1, pic_2, window_size, l_px, dt, mask_ds, snr_threshold, 50)
 # U, V, X, Y, snrs = calculate_piv_multipass(pic_1, pic_2, window_size, l_px, dt,3, mask_ds, snr_threshold, 50)
 U[mask_ds==1], V[mask_ds==1] = np.nan, np.nan
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+def plot_results(X, Y, U, V, file_name='piv_results.png', step=3):
+    """
+    Plot the PIV results with quiver and contour plots.
+    
+    Parameters:
+    -----------
+    X, Y : ndarray
+        Coordinates of velocity vectors
+    U, V : ndarray
+        Horizontal and vertical velocity components
+    file_name : str
+        Name of the file to save the plot
+    """
+    fig, ax = plt.subplots(figsize=(6, 4))
+    im = ax.contourf(X, Y, np.sqrt(U**2 + V**2), cmap='jet', corner_mask=False, levels=12)
+    
+    # Create colorbar with same height as axis
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.25)
+    cbar = fig.colorbar(im, cax=cax)
+    
+    Xds = X[::step, ::step]
+    Yds = Y[::step, ::step]
+    Uds = U[::step, ::step]
+    Vds = V[::step, ::step]
+    ax.quiver(Xds, Yds, Uds, Vds)
+    
+    ax.set_xlabel('X [mm]')
+    ax.set_ylabel('Y [mm]')
+    cbar.set_label('Velocity Magnitude (m/s)')
+    ax.set_aspect('equal')
+    
+    plt.tight_layout()
+    plt.savefig(file_name, dpi=300)
+    plt.close(fig)
+    # plt.show()
 
 
 U = U[1:-1, 1:-1]
@@ -753,44 +789,84 @@ rows, cols = 78, 101
 refU = refU.reshape((rows, cols))
 refV = refV.reshape((rows, cols))
 refMag = np.sqrt(refU**2 + refV**2)
-fig, axs = plt.subplots(2, 3, figsize=(15, 5))
+# fig, axs = plt.subplots(2, 3, figsize=(15, 5))
 U_mag = np.sqrt(U**2 + V**2)
+X, Y = X[1:-1, 1:-1], Y[1:-1, 1:-1]
+X = X * l_px * 1e3  # Convert to mm
+Y = Y * l_px * 1e3  # Convert to mm
+refX = refX.reshape((rows, cols)) - np.min(refX)
+refY = refY.reshape((rows, cols)) - np.min(refY)
+plot_results(X, Y, U, -V, file_name='figures/piv_results_own_code.png', step=3)
+plot_results(refX, refY[::-1, :], refU, -refV, file_name='figures/piv_results_reference.png', step=3)
 
-# Top row with consistent color scale
-im0 = axs[0,0].imshow(U_mag, cmap='jet', vmin=np.nanmin(refMag), vmax=np.nanmax(refMag))
-axs[0,0].set_title('U Magnitude')
-axs[0,0].set_aspect('equal')
+# plot data for all angles of attack 
+angles = [0, 5, 15]
 
-im1 = axs[0,1].imshow(U, cmap='jet', vmin=np.nanmin(refU), vmax=np.nanmax(refU))
-axs[0,1].set_title('U Velocity')
-axs[0,1].set_aspect('equal')
+for angle in angles:
+    # Load the reference data for the current angle
+    if angle == 0:
+        reference_data = np.loadtxt(f'data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_MP(3x32x32_50ov)=unknown/B00001.dat', skiprows=3)
+    elif angle == 5:
+        reference_data = np.loadtxt(f'data/alpha_5_20_PIV_MP(3x32x32_50ov)=unknown/B00001.dat', skiprows=3)
+    else:
+        reference_data = np.loadtxt(f'data/alpha_{angle}_100_PIV_MP(3x32x32_50ov)=unknown/B00001.dat', skiprows=3)
 
-im2 = axs[0,2].imshow(V, cmap='jet', vmin=np.nanmin(refV), vmax=np.nanmax(refV))
-axs[0,2].set_title('V Velocity')
-axs[0,2].set_aspect('equal')
+    refX = reference_data[:, 0]
+    refY = reference_data[:, 1]
+    refU = reference_data[:, 2]
+    refV = reference_data[:, 3]
+    refValid = reference_data[:, 4]
 
-# Bottom row with same color scale
-im3 = axs[1,0].imshow(refMag, cmap='jet', vmin=np.nanmin(refMag), vmax=np.nanmax(refMag))
-# axs[1,0].set_title('U Magnitude')
-axs[1,0].set_aspect('equal')
+    refX = refX - np.min(refX)  # Normalize X
+    refY = refY - np.min(refY)  # Normalize Y
+    rows, cols = 78, 101  # Assuming these are the dimensions of the reference data
 
-im4 = axs[1,1].imshow(refU, cmap='jet', vmin=np.nanmin(refU), vmax=np.nanmax(refU))
-# axs[1,1].set_title('U Velocity')
-axs[1,1].set_aspect('equal')
+    # Reshape and filter the reference data
+    refU[refValid == 0] = np.nan
+    refV[refValid == 0] = np.nan
+    refU = refU.reshape((rows, cols))
+    refV = refV.reshape((rows, cols))
+    
+    # Calculate the magnitude of the reference velocity
+    refMag = np.sqrt(refU**2 + refV**2)
+    
+    # Plot the results for the current angle
+    plot_results(refX.reshape((rows, cols)), 
+                 refY.reshape((rows, cols)), 
+                 refU, refV, 
+                 file_name=f'figures/piv_results_{angle}_instantaneous.png', step=3)
+    
+for angle in angles:
+    # Load the reference data for the current angle
+    if angle == 0:
+        reference_data = np.loadtxt(f'data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+    elif angle == 5:
+        reference_data = np.loadtxt(f'data/alpha_5_20_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+    else:
+        reference_data = np.loadtxt(f'data/alpha_{angle}_100_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
 
-im5 = axs[1,2].imshow(refV, cmap='jet', vmin=np.nanmin(refV), vmax=np.nanmax(refV))
-# axs[1,2].set_title('V Velocity')
-axs[1,2].set_aspect('equal')
+    refX = reference_data[:, 0]
+    refY = reference_data[:, 1]
+    refU = reference_data[:, 2]
+    refV = reference_data[:, 3]
+    refValid = reference_data[:, 4]
 
-# Add separate colorbars for each column
-cbar0 = fig.colorbar(im0, ax=[axs[0,0], axs[1,0]])
-cbar0.set_label('Velocity Magnitude (m/s)')
+    refX = refX - np.min(refX)  # Normalize X
+    refY = refY - np.min(refY)  # Normalize Y
+    rows, cols = 78, 101  # Assuming these are the dimensions of the reference data
 
-cbar1 = fig.colorbar(im1, ax=[axs[0,1], axs[1,1]])
-cbar1.set_label('U Velocity (m/s)')
-
-cbar2 = fig.colorbar(im2, ax=[axs[0,2], axs[1,2]])
-cbar2.set_label('V Velocity (m/s)')
-
-# plt.tight_layout()
-plt.savefig('piv_comparison.png', dpi=300, bbox_inches='tight')
+    # Reshape and filter the reference data
+    refU[refValid == 0] = np.nan
+    refV[refValid == 0] = np.nan
+    refU = refU.reshape((rows, cols))
+    refV = refV.reshape((rows, cols))
+    
+    # Calculate the magnitude of the reference velocity
+    refMag = np.sqrt(refU**2 + refV**2)
+    
+    # Plot the results for the current angle
+    plot_results(refX.reshape((rows, cols)), 
+                 refY.reshape((rows, cols)), 
+                 refU, refV, 
+                 file_name=f'figures/piv_results_{angle}_mean.png', step=3)
+    
