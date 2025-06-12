@@ -38,7 +38,7 @@ def plot_airfoil(angle_of_attack, scalefactor, xloc, yloc, ax=None):
     else:
         standalone = False
 
-    ax.fill(x_final, y_final, color='silver', alpha=1)
+    ax.fill(x_final, y_final, color='black', alpha=1)
     ax.plot(x_final, y_final, color='black', linewidth=0.5)
 
     if standalone:
@@ -48,6 +48,7 @@ def plot_airfoil(angle_of_attack, scalefactor, xloc, yloc, ax=None):
 if __name__ == "__main__":
     angle_of_attack = 0  # Example angle of attack in degrees
     plot_airfoil(0, 100, 25, 0, ax=None)
+    plot_airfoil(90, 100, 25, 0, ax=None)
     plt.show()
 
 
