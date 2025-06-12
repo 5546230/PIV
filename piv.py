@@ -770,7 +770,7 @@ def plot_results(X, Y, U, V, file_name='piv_results.png', step=3):
     ax.set_aspect('equal')
     
     plt.tight_layout()
-    plt.savefig(file_name, dpi=300)
+    plt.savefig(file_name[:-3] + 'pdf' , format='pdf')
     plt.close(fig)
     # plt.show()
 
