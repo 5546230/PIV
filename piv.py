@@ -873,3 +873,25 @@ for angle in angles:
                  refU, -refV, 
                  file_name=f'figures/piv_results_{angle}_mean.png', step=3)
     
+for angle in angles:
+    # Load the reference data for the current angle
+    if angle == 0:
+        reference_data_mean = np.loadtxt(f'data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+        reference_data_stdev = np.loadtxt(f'data/alpha_0_20_SubOverTimeMin_sL=all_01_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00002.dat', skiprows=3)
+    elif angle == 5:
+        reference_data_mean = np.loadtxt(f'data/alpha_5_20_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+        reference_data_stdev = np.loadtxt(f'data/alpha_5_20_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00002.dat', skiprows=3)
+    else:
+        reference_data_mean = np.loadtxt(f'data/alpha_{angle}_100_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+        reference_data_stdev = np.loadtxt(f'data/alpha_{angle}_100_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00002.dat', skiprows=3)
+
+    refX = reference_data_mean[:, 0]
+    refY = reference_data_mean[:, 1][np.isclose(refX, 120, atol=0.5)][1:-1]
+    refUmean = reference_data_mean[:, 2][np.isclose(refX, 120, atol=0.5)][1:-1]
+    plt.plot(refUmean, refY-50, label=f'alpha={angle} deg')
+    refUstdev = reference_data_stdev[:, 2][np.isclose(refX, 120, atol=0.5)][1:-1]
+    # plt.plot(refUstdev, refY-50, linestyle='--', label=f'alpha={angle} deg (stdev)')
+    data_array = np.column_stack((refY-50, refUmean, refUstdev))
+    np.savetxt(f'data/alpha_{angle}_Uprov.txt', data_array, delimiter='\t', header='y_mm\tmean_u\trms_u', comments='')
+plt.legend()
+plt.show()
