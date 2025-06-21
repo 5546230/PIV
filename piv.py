@@ -967,7 +967,8 @@ plot_results(refX.reshape((rows, cols)),
              file_name=f'figures/piv_results_sp_32_50ov.pdf', step=3)
 
 # check short dt at alfa 15
-reference_data = np.loadtxt('data/alpha_15_20_dt_6_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+# reference_data = np.loadtxt('data/alpha_15_20_dt_6_PIV_MP(3x32x32_50ov)_Avg_Stdev=unknown/B00001.dat', skiprows=3)
+reference_data = np.loadtxt('data/alpha_15_20_dt_6_PIV_MP(3x32x32_50ov)=unknown/B00001.dat', skiprows=3)
 refX = reference_data[:, 0]
 refY = reference_data[:, 1]
 refU = reference_data[:, 2]
